@@ -416,16 +416,6 @@ window.addEventListener("beforeinstallprompt", (e) => {
   if (banner) banner.classList.add("show");
 });
 
-// 已安装的应用：隐藏调试面板和安装横幅
-if (isStandalone) {
-  document.addEventListener("DOMContentLoaded", () => {
-    const debug = document.getElementById("debugPanel");
-    const banner = document.getElementById("installBanner");
-    if (debug) debug.style.display = "none";
-    if (banner) banner.classList.remove("show");
-  });
-}
-
 // ===== 数据层 =====
 const STORAGE_KEY = "workout_tracker_data";
 const CUSTOM_KEY = "workout_tracker_custom";
@@ -693,6 +683,12 @@ document.getElementById("installClose").addEventListener("click", () => {
 
 // ===== PWA 调试面板 =====
 (async function debugPWA() {
+  // 已安装的独立应用：不显示调试面板
+  if (isStandalone) {
+    document.getElementById("debugPanel").style.display = "none";
+    return;
+  }
+
   const items = [];
 
   // 1. HTTPS

@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>重置缓存</title>
+<style>
+  body {
+    font-family: system-ui, sans-serif;
+    max-width: 400px; margin: 40px auto; padding: 20px;
+    background: #0f172a; color: #e2e8f0;
+  }
+  .msg { padding: 20px; background: #1e293b; border-radius: 12px; text-align: center; }
+  .ok { color: #34d399; }
+  .err { color: #f87171; }
+  button {
+    display: block; width: 100%; margin-top: 16px;
+    padding: 14px; background: #38bdf8; color: #0f172a;
+    border: none; border-radius: 10px; font-size: 16px; font-weight: 700;
+    cursor: pointer;
+  }
+  progress { width: 100%; margin-top: 16px; }
+</style>
+</head>
+<body>
+<div class="msg">
+  <h2>🔧 SW 缓存重置</h2>
+  <p id="status">正在检测...</p>
+  <progress id="prog" style="display:none"></progress>
+</div>
+
+<script>
+(async function() {
+  const s = document.getElementById("status");
+
+  s.innerHTML = '⏳ 清除 Service Worker...';
+
+  // 1. 注销所有 SW
+  if ("serviceWorker" in navigator) {
+    const regs = await navigator.serviceWorker.getRegistrations();
+    for (const reg of regs) {
+      await reg.unregister();
+    }
+    s.innerHTML += '<br><span class="ok">✅ SW 已注销 (' + regs.length + '个)</span>';
+  }
+
+  // 2. 清除所有 Cache Storage
+  if ("caches" in window) {
+    const keys = await caches.keys();
+    for (const key of keys) {
+      await caches.delete(key);
+    }
+    s.innerHTML += '<br><span class="ok">✅ 缓存已清除 (' + keys.length + '个)</span>';
+  }
+
+  // 3. 清除 IndexedDB (localStorage 的替代)
+  try { localStorage.clear(); } catch(e) {}
+
+  s.innerHTML += '<br><br><span class="ok" style="font-size:18px">🎉 重置完成！</span>';
+  s.innerHTML += '<br><small style="color:#94a3b8">SW 和缓存已全部清空，旧页面的"死锁"已打破。</small>';
+
+  // 跳转按钮
+  const btn = document.createElement("button");
+  btn.textContent = "👉 前往锻炼打卡";
+  btn.addEventListener("click", () => {
+    window.location.href = "/workout-tracker/workout-tracker.html";
+  });
+  s.parentNode.appendChild(btn);
+})();
+</script>
+</body>
+</html>

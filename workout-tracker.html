@@ -264,6 +264,38 @@
   .ex-card.custom:hover .del { display: block; }
   .ex-card.custom .del:hover { background: rgba(248,113,113,0.2); }
 
+  /* ===== 调试面板 ===== */
+  .debug-panel {
+    margin: 20px 16px;
+    padding: 16px;
+    background: #1a1a2e;
+    border: 1px solid #333;
+    border-radius: 12px;
+    font-size: 13px;
+  }
+  .debug-title {
+    color: #fbbf24;
+    font-weight: 700;
+    margin-bottom: 10px;
+    font-size: 14px;
+  }
+  .debug-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 4px 0;
+    color: #94a3b8;
+  }
+  .debug-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .debug-dot.ok { background: #34d399; }
+  .debug-dot.fail { background: #f87171; }
+  .debug-dot.warn { background: #fbbf24; }
+
 </style>
 </head>
 <body>
@@ -315,6 +347,12 @@
       <div class="desc">本月出勤率</div>
     </div>
   </div>
+</div>
+
+<!-- 调试面板：PWA 状态检测 -->
+<div class="debug-panel" id="debugPanel">
+  <div class="debug-title">🔧 PWA 安装状态检测</div>
+  <div id="debugContent">检测中...</div>
 </div>
 
 <script>
@@ -538,6 +576,114 @@ render();
 if ("serviceWorker" in navigator) {
   navigator.serviceWorker.register("/workout-tracker/service-worker.js", { scope: "/workout-tracker/" });
 }
+
+// ===== PWA 调试面板 =====
+(async function debugPWA() {
+  const items = [];
+
+  // 1. HTTPS
+  items.push({
+    label: "HTTPS 安全连接",
+    ok: location.protocol === "https:",
+    detail: location.protocol
+  });
+
+  // 2. Manifest
+  const manifestLink = document.querySelector('link[rel="manifest"]');
+  let manifestOk = false;
+  let manifestDetail = "未找到 manifest link";
+  if (manifestLink) {
+    try {
+      const resp = await fetch(manifestLink.href);
+      const json = await resp.json();
+      manifestOk = !!(json.name && json.start_url && json.display === "standalone" && json.icons?.length);
+      manifestDetail = manifestOk
+        ? `OK: name="${json.name}", display=${json.display}, icons=${json.icons.length}个`
+        : "内容不完整: " + JSON.stringify({name:!!json.name, start_url:!!json.start_url, display:json.display, icons:json.icons?.length});
+    } catch (e) {
+      manifestDetail = "加载失败: " + e.message;
+    }
+  }
+  items.push({ label: "Manifest 清单文件", ok: manifestOk, detail: manifestDetail });
+
+  // 3. Service Worker
+  let swOk = false;
+  let swDetail = "不支持 Service Worker";
+  if ("serviceWorker" in navigator) {
+    const reg = await navigator.serviceWorker.getRegistration();
+    if (reg) {
+      const sw = reg.active || reg.waiting || reg.installing;
+      swOk = !!(sw && reg.active);
+      swDetail = swOk
+        ? `已注册: scope="${reg.scope}", state=${sw.state}`
+        : `已注册但未激活: scope="${reg.scope}", active=${!!reg.active}, waiting=${!!reg.waiting}`;
+    } else {
+      swDetail = "未找到注册";
+    }
+  }
+  items.push({ label: "Service Worker", ok: swOk, detail: swDetail });
+
+  // 4. 图标加载
+  let iconOk = false;
+  let iconDetail = "未检测";
+  if (manifestLink) {
+    try {
+      const resp = await fetch(manifestLink.href);
+      const json = await resp.json();
+      const icons = json.icons || [];
+      const bigIcons = icons.filter(i => {
+        const size = parseInt(i.sizes) || 0;
+        return size >= 192;
+      });
+      if (bigIcons.length > 0) {
+        const testIcon = bigIcons[0];
+        const imgResp = await fetch(new URL(testIcon.src, location.origin).href);
+        iconOk = imgResp.ok;
+        iconDetail = iconOk
+          ? `OK: ${bigIcons.length}个≥192px图标, 测试 ${testIcon.src} → ${imgResp.status}`
+          : `图标请求失败: ${testIcon.src} → ${imgResp.status}`;
+      } else {
+        iconDetail = "无≥192px的图标";
+      }
+    } catch (e) {
+      iconDetail = "检测失败: " + e.message;
+    }
+  }
+  items.push({ label: "图标 (≥192px PNG)", ok: iconOk, detail: iconDetail });
+
+  // 5. beforeinstallprompt 支持
+  let bipSupported = false;
+  window.addEventListener("beforeinstallprompt", (e) => {
+    bipSupported = true;
+  });
+  // 等 500ms 看看有没有触发
+  await new Promise(r => setTimeout(r, 500));
+  items.push({
+    label: "beforeinstallprompt",
+    ok: bipSupported,
+    detail: bipSupported ? "浏览器触发了安装事件" : "未触发 (可能因已安装/不满足条件/已关闭)"
+  });
+
+  // 渲染
+  const html = items.map(i =>
+    `<div class="debug-item">
+      <span class="debug-dot ${i.ok ? 'ok' : 'fail'}"></span>
+      <span>${i.ok ? '✅' : '❌'} ${i.label}</span>
+      <span style="color:#64748b;font-size:11px">${i.detail}</span>
+    </div>`
+  ).join("");
+
+  document.getElementById("debugContent").innerHTML = html;
+
+  const allOk = items.every(i => i.ok);
+  if (allOk) {
+    document.getElementById("debugContent").innerHTML +=
+      '<div style="margin-top:10px;color:#34d399;font-weight:700;">🎉 所有检测通过！如果仍未出现"安装应用"，请截图此面板反馈。</div>';
+  } else {
+    document.getElementById("debugContent").innerHTML +=
+      '<div style="margin-top:10px;color:#f87171;">⚠️ 以上 ❌ 项可能是导致无法安装的原因。</div>';
+  }
+})();
 </script>
 </body>
 </html>

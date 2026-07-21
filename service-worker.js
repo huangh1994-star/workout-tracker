@@ -1,7 +1,7 @@
 // 锻炼打卡 - Service Worker
 // 安装后缓存核心文件，支持离线访问
 
-const CACHE_NAME = "workout-v2";
+const CACHE_NAME = "workout-v3";
 const FILES = [
   "./",
   "./index.html",

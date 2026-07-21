@@ -408,12 +408,23 @@
 <script>
 // ===== PWA 安装拦截：必须在最前面注册，避免错过 beforeinstallprompt 事件 =====
 let deferredPrompt = null;
+const isStandalone = window.matchMedia("(display-mode: standalone)").matches;
 window.addEventListener("beforeinstallprompt", (e) => {
   e.preventDefault();
   deferredPrompt = e;
   const banner = document.getElementById("installBanner");
   if (banner) banner.classList.add("show");
 });
+
+// 已安装的应用：隐藏调试面板和安装横幅
+if (isStandalone) {
+  document.addEventListener("DOMContentLoaded", () => {
+    const debug = document.getElementById("debugPanel");
+    const banner = document.getElementById("installBanner");
+    if (debug) debug.style.display = "none";
+    if (banner) banner.classList.remove("show");
+  });
+}
 
 // ===== 数据层 =====
 const STORAGE_KEY = "workout_tracker_data";

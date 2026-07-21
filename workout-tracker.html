@@ -633,13 +633,24 @@ navigator.serviceWorker?.addEventListener("controllerchange", () => {
   let swOk = false;
   let swDetail = "不支持 Service Worker";
   if ("serviceWorker" in navigator) {
+    // 先等 1 秒让 SW 有时间激活
+    await new Promise(r => setTimeout(r, 1000));
     const reg = await navigator.serviceWorker.getRegistration();
-    if (reg) {
-      const sw = reg.active || reg.waiting || reg.installing;
-      swOk = !!(sw && reg.active);
-      swDetail = swOk
-        ? `已注册: scope="${reg.scope}", state=${sw.state}`
-        : `已注册但未激活: scope="${reg.scope}", active=${!!reg.active}, waiting=${!!reg.waiting}`;
+    const controller = navigator.serviceWorker.controller;
+    if (reg && reg.active) {
+      swOk = true;
+      swDetail = `已激活: scope="${reg.scope}", state=${reg.active.state}, 当前页面${controller ? "已" : "未"}接管`;
+    } else if (reg && reg.waiting) {
+      // 有 waiting SW，尝试通知它激活
+      reg.waiting.postMessage("skip-waiting");
+      swDetail = `正在激活: scope="${reg.scope}", 已发送激活指令，请点"重新检测"`;
+      swOk = false;
+    } else if (reg && reg.installing) {
+      swDetail = `安装中: scope="${reg.scope}"，请稍候再检测`;
+      swOk = false;
+    } else if (controller) {
+      swOk = true;
+      swDetail = `页面已被 SW 接管: scope="${reg?.scope || '未知'}"`;
     } else {
       swDetail = "未找到注册";
     }

@@ -2,7 +2,9 @@
   "name": "锻炼打卡",
   "short_name": "锻炼打卡",
   "description": "每日锻炼打卡小工具，追踪你的运动习惯",
-  "start_url": "./workout-tracker.html",
+  "id": "workout-tracker-v1",
+  "start_url": "/workout-tracker/workout-tracker.html",
+  "scope": "/workout-tracker/",
   "display": "standalone",
   "background_color": "#0f172a",
   "theme_color": "#0f172a",
@@ -10,13 +12,13 @@
   "lang": "zh-CN",
   "icons": [
     {
-      "src": "icon-512.png",
+      "src": "/workout-tracker/icon-512.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "icon-192.png",
+      "src": "/workout-tracker/icon-192.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any"

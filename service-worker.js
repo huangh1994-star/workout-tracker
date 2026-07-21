@@ -5,6 +5,8 @@ const CACHE_NAME = "workout-v1";
 const FILES = [
   "./workout-tracker.html",
   "./manifest.json",
+  "./icon-192.png",
+  "./icon-512.png",
 ];
 
 // 安装：预缓存核心文件

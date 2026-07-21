@@ -263,6 +263,34 @@
   }
   .ex-card.custom:hover .del { display: block; }
   .ex-card.custom .del:hover { background: rgba(248,113,113,0.2); }
+
+  /* ---- 安装提示条 ---- */
+  .install-banner {
+    display: none;
+    background: var(--card);
+    border: 2px solid var(--accent);
+    border-radius: 14px;
+    padding: 16px 20px;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+  }
+  .install-banner.show { display: flex; }
+  .install-banner .msg {
+    font-size: 14px;
+    font-weight: 600;
+  }
+  .install-banner button {
+    background: var(--accent);
+    border: none;
+    border-radius: 10px;
+    padding: 10px 16px;
+    color: #000;
+    font-weight: 700;
+    font-size: 13px;
+    cursor: pointer;
+    white-space: nowrap;
+  }
 </style>
 </head>
 <body>
@@ -271,6 +299,12 @@
   <div class="header">
     <div class="date" id="dateDisplay"></div>
     <div class="title">💪 锻炼打卡</div>
+  </div>
+
+  <!-- 安装提示条 -->
+  <div class="install-banner" id="installBanner">
+    <span class="msg">📲 安装到主屏幕</span>
+    <button id="installBtn">立即安装</button>
   </div>
 
   <!-- 连续打卡 -->
@@ -537,6 +571,30 @@ render();
 if ("serviceWorker" in navigator) {
   navigator.serviceWorker.register("service-worker.js");
 }
+
+// ===== PWA：安装提示 =====
+let deferredPrompt;
+const installBanner = document.getElementById("installBanner");
+const installBtn = document.getElementById("installBtn");
+
+window.addEventListener("beforeinstallprompt", (e) => {
+  e.preventDefault();
+  deferredPrompt = e;
+  installBanner.classList.add("show");
+});
+
+installBtn.addEventListener("click", async () => {
+  if (!deferredPrompt) return;
+  deferredPrompt.prompt();
+  const { outcome } = await deferredPrompt.userChoice;
+  if (outcome === "accepted") installBanner.classList.remove("show");
+  deferredPrompt = null;
+});
+
+window.addEventListener("appinstalled", () => {
+  installBanner.classList.remove("show");
+  deferredPrompt = null;
+});
 </script>
 </body>
 </html>

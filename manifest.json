@@ -1,0 +1,18 @@
+{
+  "name": "锻炼打卡",
+  "short_name": "锻炼打卡",
+  "description": "每日锻炼打卡小工具，追踪你的运动习惯",
+  "start_url": "./workout-tracker.html",
+  "display": "standalone",
+  "background_color": "#0f172a",
+  "theme_color": "#0f172a",
+  "orientation": "portrait-primary",
+  "lang": "zh-CN",
+  "icons": [
+    {
+      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='85'>💪</text></svg>",
+      "sizes": "100x100",
+      "type": "image/svg+xml"
+    }
+  ]
+}

@@ -1,0 +1,542 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#0f172a">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="锻炼打卡">
+<link rel="manifest" href="manifest.json">
+<title>锻炼打卡</title>
+<style>
+  :root {
+    --bg: #0f172a;
+    --card: #1e293b;
+    --border: #334155;
+    --text: #e2e8f0;
+    --muted: #94a3b8;
+    --accent: #38bdf8;
+    --accent-glow: rgba(56,189,248,0.3);
+    --done: #34d399;
+    --done-bg: rgba(52,211,153,0.15);
+    --undone: #475569;
+    --danger: #f87171;
+    --warm: #fbbf24;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    padding: 20px;
+  }
+
+  .app {
+    width: 100%;
+    max-width: 500px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+
+  /* ---- 顶部 ---- */
+  .header {
+    text-align: center;
+    padding: 10px 0;
+  }
+  .header .date {
+    font-size: 14px;
+    color: var(--muted);
+    margin-bottom: 4px;
+  }
+  .header .title {
+    font-size: 28px;
+    font-weight: 700;
+    letter-spacing: 2px;
+  }
+
+  /* ---- 连续打卡 ---- */
+  .streak-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 24px;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+  }
+  .streak-card::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(ellipse at 50% 0%, var(--accent-glow), transparent 60%);
+    opacity: 0.4;
+  }
+  .streak-label {
+    font-size: 13px;
+    color: var(--muted);
+    letter-spacing: 2px;
+    position: relative;
+  }
+  .streak-count {
+    font-size: 64px;
+    font-weight: 800;
+    color: var(--warm);
+    line-height: 1;
+    position: relative;
+  }
+  .streak-unit {
+    font-size: 18px;
+    color: var(--muted);
+    position: relative;
+  }
+
+  /* ---- 今日打卡 ---- */
+  .section-title {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--muted);
+    letter-spacing: 1px;
+    margin-bottom: 4px;
+  }
+
+  .exercise-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+  }
+  .ex-card {
+    background: var(--card);
+    border: 2px solid var(--border);
+    border-radius: 14px;
+    padding: 16px 10px;
+    text-align: center;
+    cursor: pointer;
+    transition: all .15s;
+    user-select: none;
+    position: relative;
+  }
+  .ex-card:active { transform: scale(0.96); }
+  .ex-card.done {
+    border-color: var(--done);
+    background: var(--done-bg);
+  }
+  .ex-card .icon {
+    font-size: 28px;
+    margin-bottom: 6px;
+  }
+  .ex-card .name {
+    font-size: 13px;
+    font-weight: 500;
+  }
+  .ex-card .check {
+    position: absolute;
+    top: 8px;
+    right: 10px;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: var(--done);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    color: #000;
+  }
+  .ex-card.done .check { display: flex; }
+
+  /* ---- 添加自定义 ---- */
+  .add-row {
+    display: flex;
+    gap: 8px;
+  }
+  .add-row input {
+    flex: 1;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 10px 14px;
+    color: var(--text);
+    font-size: 14px;
+    outline: none;
+  }
+  .add-row input:focus { border-color: var(--accent); }
+  .add-row button {
+    background: var(--accent);
+    border: none;
+    border-radius: 10px;
+    padding: 10px 18px;
+    color: #000;
+    font-weight: 600;
+    font-size: 14px;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+  .add-row button:active { opacity: 0.8; }
+
+  /* ---- 热力图 ---- */
+  .heatmap-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 20px;
+  }
+  .heatmap-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 14px;
+  }
+  .heatmap-header .label {
+    font-size: 14px;
+    font-weight: 600;
+  }
+  .heatmap-header .stats {
+    font-size: 12px;
+    color: var(--muted);
+  }
+  .heatmap {
+    display: flex;
+    gap: 4px;
+    flex-wrap: wrap;
+  }
+  .heatmap .day {
+    width: 32px;
+    height: 32px;
+    border-radius: 6px;
+    background: var(--undone);
+    font-size: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--muted);
+    position: relative;
+  }
+  .heatmap .day.l1 { background: rgba(52,211,153,0.25); }
+  .heatmap .day.l2 { background: rgba(52,211,153,0.50); }
+  .heatmap .day.l3 { background: rgba(52,211,153,0.80); color: #000; }
+
+  /* ---- 统计 ---- */
+  .stats-row {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+  }
+  .stat-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 16px;
+    text-align: center;
+  }
+  .stat-card .num {
+    font-size: 28px;
+    font-weight: 700;
+    color: var(--accent);
+  }
+  .stat-card .desc {
+    font-size: 12px;
+    color: var(--muted);
+    margin-top: 2px;
+  }
+
+  /* ---- 自定义项目删除 ---- */
+  .ex-card .del {
+    position: absolute;
+    top: 8px;
+    left: 10px;
+    font-size: 12px;
+    color: var(--danger);
+    display: none;
+    cursor: pointer;
+    width: 18px;
+    height: 18px;
+    line-height: 18px;
+    text-align: center;
+    border-radius: 50%;
+  }
+  .ex-card.custom:hover .del { display: block; }
+  .ex-card.custom .del:hover { background: rgba(248,113,113,0.2); }
+</style>
+</head>
+<body>
+<div class="app">
+  <!-- 头部 -->
+  <div class="header">
+    <div class="date" id="dateDisplay"></div>
+    <div class="title">💪 锻炼打卡</div>
+  </div>
+
+  <!-- 连续打卡 -->
+  <div class="streak-card">
+    <div class="streak-label">连续打卡</div>
+    <div class="streak-count" id="streakCount">0</div>
+    <div class="streak-unit">天</div>
+  </div>
+
+  <!-- 今日打卡 -->
+  <div class="section-title">🏋️ 今日训练</div>
+  <div class="exercise-grid" id="exerciseGrid"></div>
+
+  <!-- 添加自定义 -->
+  <div class="add-row">
+    <input type="text" id="addInput" placeholder="添加自定义项目…" maxlength="10">
+    <button id="addBtn">＋ 添加</button>
+  </div>
+
+  <!-- 热力图 -->
+  <div class="heatmap-card">
+    <div class="heatmap-header">
+      <span class="label">📅 近 28 天</span>
+      <span class="stats" id="heatmapStats"></span>
+    </div>
+    <div class="heatmap" id="heatmap"></div>
+  </div>
+
+  <!-- 统计 -->
+  <div class="stats-row">
+    <div class="stat-card">
+      <div class="num" id="statMonth">0</div>
+      <div class="desc">本月打卡天数</div>
+    </div>
+    <div class="stat-card">
+      <div class="num" id="statWeek">0</div>
+      <div class="desc">本周打卡天数</div>
+    </div>
+    <div class="stat-card">
+      <div class="num" id="statRate">0%</div>
+      <div class="desc">本月出勤率</div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ===== 数据层 =====
+const STORAGE_KEY = "workout_tracker_data";
+const CUSTOM_KEY = "workout_tracker_custom";
+
+const DEFAULT_EXERCISES = [
+  { id: "pushup",     icon: "💪", name: "俯卧撑" },
+  { id: "squat",      icon: "🦵", name: "深蹲" },
+  { id: "running",    icon: "🏃", name: "跑步" },
+  { id: "plank",      icon: "🧘", name: "平板支撑" },
+  { id: "situp",      icon: "🔄", name: "仰卧起坐" },
+  { id: "jump_rope",  icon: "🪢", name: "跳绳" },
+  { id: "pullup",     icon: "🏋️", name: "引体向上" },
+  { id: "cycling",    icon: "🚴", name: "骑行" },
+  { id: "swim",       icon: "🏊", name: "游泳" },
+];
+
+function loadData() {
+  try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || {}; }
+  catch { return {}; }
+}
+function saveData(data) { localStorage.setItem(STORAGE_KEY, JSON.stringify(data)); }
+
+function loadCustom() {
+  try { return JSON.parse(localStorage.getItem(CUSTOM_KEY)) || []; }
+  catch { return []; }
+}
+function saveCustom(list) { localStorage.setItem(CUSTOM_KEY, JSON.stringify(list)); }
+
+function todayStr() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
+}
+
+function getToday() {
+  const d = todayStr();
+  const data = loadData();
+  if (!data[d]) data[d] = {};
+  return { date: d, record: data[d], all: data };
+}
+
+// ===== 连续天数 =====
+function calcStreak(data) {
+  const today = new Date();
+  let streak = 0;
+  for (let i = 0; i < 400; i++) {
+    const d = new Date(today);
+    d.setDate(d.getDate() - i);
+    const ds = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
+    const rec = data[ds];
+    const completed = rec && Object.values(rec).some(v => v === true);
+    if (completed) { streak++; }
+    else if (i === 0) { continue; } // 今天还没打不算断
+    else { break; }
+  }
+  return streak;
+}
+
+// ===== 渲染 =====
+const allExercises = () => [...DEFAULT_EXERCISES, ...loadCustom().map(c => ({ id: c, icon: "⭐", name: c, custom: true }))];
+
+function render() {
+  const { date, record, all: data } = getToday();
+  const streak = calcStreak(data);
+  const exercises = allExercises();
+
+  // 日期
+  const now = new Date();
+  const weekNames = ["日","一","二","三","四","五","六"];
+  document.getElementById("dateDisplay").textContent =
+    `${now.getFullYear()}年${now.getMonth()+1}月${now.getDate()}日 星期${weekNames[now.getDay()]}`;
+
+  // 连续打卡
+  document.getElementById("streakCount").textContent = streak;
+
+  // 今日项目
+  const grid = document.getElementById("exerciseGrid");
+  grid.innerHTML = "";
+  exercises.forEach(ex => {
+    const card = document.createElement("div");
+    card.className = "ex-card" + (record[ex.id] ? " done" : "") + (ex.custom ? " custom" : "");
+    card.innerHTML = `
+      <span class="del" data-id="${ex.id}">×</span>
+      <span class="check">✓</span>
+      <div class="icon">${ex.icon}</div>
+      <div class="name">${ex.name}</div>
+    `;
+    card.addEventListener("click", (e) => {
+      if (e.target.classList.contains("del")) {
+        e.stopPropagation();
+        removeCustom(ex.id);
+        return;
+      }
+      toggle(ex.id);
+    });
+    grid.appendChild(card);
+  });
+
+  // 热力图
+  renderHeatmap(data);
+
+  // 统计
+  renderStats(data, exercises);
+
+  // 保存（清理空记录）
+  if (Object.keys(record).length === 0) delete data[date];
+  saveData(data);
+}
+
+function toggle(exId) {
+  const { date, record, all: data } = getToday();
+  if (record[exId]) {
+    delete record[exId];
+  } else {
+    record[exId] = true;
+  }
+  if (Object.keys(record).length === 0) delete data[date];
+  else data[date] = record;
+  saveData(data);
+  render();
+}
+
+function removeCustom(id) {
+  const custom = loadCustom().filter(c => c !== id);
+  saveCustom(custom);
+  // 清除历史数据中该自定义项
+  const data = loadData();
+  Object.values(data).forEach(rec => { if (rec[id]) delete rec[id]; });
+  saveData(data);
+  render();
+}
+
+document.getElementById("addBtn").addEventListener("click", () => {
+  const input = document.getElementById("addInput");
+  const name = input.value.trim();
+  if (!name) return;
+  const custom = loadCustom();
+  if (custom.includes(name) || DEFAULT_EXERCISES.some(e => e.name === name)) {
+    alert("项目已存在");
+    return;
+  }
+  custom.push(name);
+  saveCustom(custom);
+  input.value = "";
+  render();
+});
+
+document.getElementById("addInput").addEventListener("keydown", (e) => {
+  if (e.key === "Enter") document.getElementById("addBtn").click();
+});
+
+// ===== 热力图 =====
+function renderHeatmap(data) {
+  const container = document.getElementById("heatmap");
+  const today = new Date();
+  let doneDays = 0;
+  let html = "";
+
+  for (let i = 27; i >= 0; i--) {
+    const d = new Date(today);
+    d.setDate(d.getDate() - i);
+    const ds = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
+    const rec = data[ds];
+    const count = rec ? Object.values(rec).filter(v => v === true).length : 0;
+    let cls = "";
+    if (count >= 6) cls = "l3";
+    else if (count >= 3) cls = "l2";
+    else if (count >= 1) cls = "l1";
+    if (count > 0) doneDays++;
+    const tip = `${ds} — ${count}项`;
+    html += `<div class="day ${cls}" title="${tip}">${d.getDate()}</div>`;
+  }
+
+  container.innerHTML = html;
+  document.getElementById("heatmapStats").textContent = `完成 ${doneDays}/28 天`;
+}
+
+// ===== 统计 =====
+function renderStats(data) {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = now.getMonth();
+
+  let monthDays = 0;
+  let weekDays = 0;
+
+  // 本月
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  for (let d = 1; d <= daysInMonth; d++) {
+    const ds = `${year}-${String(month+1).padStart(2,"0")}-${String(d).padStart(2,"0")}`;
+    const rec = data[ds];
+    if (rec && Object.values(rec).some(v => v === true)) monthDays++;
+  }
+
+  // 本周（周一到今天）
+  const dayOfWeek = now.getDay();
+  const mondayOffset = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(now);
+    d.setDate(d.getDate() + mondayOffset + i);
+    if (d > now) break;
+    const ds = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
+    const rec = data[ds];
+    if (rec && Object.values(rec).some(v => v === true)) weekDays++;
+  }
+
+  const elapsed = Math.min(now.getDate(), daysInMonth);
+  const rate = elapsed > 0 ? Math.round((monthDays / elapsed) * 100) : 0;
+
+  document.getElementById("statMonth").textContent = monthDays;
+  document.getElementById("statWeek").textContent = weekDays;
+  document.getElementById("statRate").textContent = rate + "%";
+}
+
+// ===== 启动 =====
+render();
+
+// ===== PWA：注册 Service Worker =====
+if ("serviceWorker" in navigator) {
+  navigator.serviceWorker.register("service-worker.js");
+}
+</script>
+</body>
+</html>

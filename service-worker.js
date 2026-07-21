@@ -1,7 +1,7 @@
 // 锻炼打卡 - Service Worker
 // 安装后缓存核心文件，支持离线访问
 
-const CACHE_NAME = "workout-v3";
+const CACHE_NAME = "workout-v4";
 const FILES = [
   "./",
   "./index.html",
@@ -27,6 +27,13 @@ self.addEventListener("activate", (event) => {
     )
   );
   self.clients.claim();
+});
+
+// 响应页面发来的 skip-waiting 消息
+self.addEventListener("message", (event) => {
+  if (event.data === "skip-waiting") {
+    self.skipWaiting();
+  }
 });
 
 // 请求拦截：缓存优先，网络兜底

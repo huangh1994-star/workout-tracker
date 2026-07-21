@@ -572,10 +572,33 @@ function renderStats(data) {
 // ===== 启动 =====
 render();
 
-// ===== PWA：注册 Service Worker =====
+// ===== PWA：注册 Service Worker（含强制更新逻辑）=====
 if ("serviceWorker" in navigator) {
-  navigator.serviceWorker.register("/workout-tracker/service-worker.js", { scope: "/workout-tracker/" });
+  navigator.serviceWorker.register("/workout-tracker/service-worker.js", { scope: "/workout-tracker/" })
+    .then(reg => {
+      // 如果 SW 处于 waiting 状态，通知它立即激活
+      if (reg.waiting) {
+        reg.waiting.postMessage("skip-waiting");
+      }
+      // 检测到新 SW 时，通知它立即激活
+      reg.addEventListener("updatefound", () => {
+        const installing = reg.installing;
+        installing.addEventListener("statechange", () => {
+          if (installing.state === "installed" && navigator.serviceWorker.controller) {
+            installing.postMessage("skip-waiting");
+          }
+        });
+      });
+    });
 }
+
+// SW 激活后自动刷新页面（确保新 SW 接管）
+let refreshing = false;
+navigator.serviceWorker?.addEventListener("controllerchange", () => {
+  if (refreshing) return;
+  refreshing = true;
+  window.location.reload();
+});
 
 // ===== PWA 调试面板 =====
 (async function debugPWA() {
@@ -683,6 +706,14 @@ if ("serviceWorker" in navigator) {
     document.getElementById("debugContent").innerHTML +=
       '<div style="margin-top:10px;color:#f87171;">⚠️ 以上 ❌ 项可能是导致无法安装的原因。</div>';
   }
+
+  // 重新检测按钮
+  document.getElementById("debugContent").innerHTML +=
+    '<button id="recheckBtn" style="margin-top:12px;padding:10px 24px;background:#38bdf8;color:#0f172a;border:none;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer;width:100%;">🔄 重新检测</button>';
+  document.getElementById("recheckBtn").addEventListener("click", () => {
+    document.getElementById("debugContent").innerHTML = "检测中...";
+    setTimeout(() => location.reload(), 100);
+  });
 })();
 </script>
 </body>

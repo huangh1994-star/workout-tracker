@@ -406,6 +406,15 @@
 </div>
 
 <script>
+// ===== PWA 安装拦截：必须在最前面注册，避免错过 beforeinstallprompt 事件 =====
+let deferredPrompt = null;
+window.addEventListener("beforeinstallprompt", (e) => {
+  e.preventDefault();
+  deferredPrompt = e;
+  const banner = document.getElementById("installBanner");
+  if (banner) banner.classList.add("show");
+});
+
 // ===== 数据层 =====
 const STORAGE_KEY = "workout_tracker_data";
 const CUSTOM_KEY = "workout_tracker_custom";
@@ -650,28 +659,25 @@ navigator.serviceWorker?.addEventListener("controllerchange", () => {
   window.location.reload();
 });
 
-// ===== PWA 安装拦截：捕获 beforeinstallprompt 事件 =====
-let deferredPrompt = null;
-const installBanner = document.getElementById("installBanner");
-const installBtn = document.getElementById("installBtn");
-const installClose = document.getElementById("installClose");
-
-window.addEventListener("beforeinstallprompt", (e) => {
-  e.preventDefault();
-  deferredPrompt = e;
-  installBanner.classList.add("show");
-});
-
-installBtn.addEventListener("click", async () => {
-  if (!deferredPrompt) return;
+// ===== 安装按钮事件 =====
+document.getElementById("installBtn").addEventListener("click", async () => {
+  if (!deferredPrompt) {
+    alert("安装对话框暂不可用，请刷新页面后重试");
+    return;
+  }
   deferredPrompt.prompt();
   const { outcome } = await deferredPrompt.userChoice;
-  installBanner.classList.remove("show");
   deferredPrompt = null;
+  document.getElementById("installBanner").classList.remove("show");
+  if (outcome === "accepted") {
+    // 安装成功，Chrome 会自动创建桌面图标
+  } else {
+    alert("安装已取消，可刷新页面后重新安装");
+  }
 });
 
-installClose.addEventListener("click", () => {
-  installBanner.classList.remove("show");
+document.getElementById("installClose").addEventListener("click", () => {
+  document.getElementById("installBanner").classList.remove("show");
 });
 
 // ===== PWA 调试面板 =====
@@ -786,7 +792,9 @@ installClose.addEventListener("click", () => {
   const allOk = items.every(i => i.ok);
   if (allOk) {
     document.getElementById("debugContent").innerHTML +=
-      '<div style="margin-top:10px;color:#34d399;font-weight:700;">🎉 所有检测通过！如果仍未出现"安装应用"，请截图此面板反馈。</div>';
+      '<div style="margin-top:10px;color:#34d399;font-weight:700;">🎉 所有检测通过！点击下方安装按钮添加到桌面。</div>';
+    // 主动显示安装横幅
+    document.getElementById("installBanner").classList.add("show");
   } else {
     document.getElementById("debugContent").innerHTML +=
       '<div style="margin-top:10px;color:#f87171;">⚠️ 以上 ❌ 项可能是导致无法安装的原因。</div>';
